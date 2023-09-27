@@ -1,16 +1,17 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone, OnInit, ViewChild } from '@angular/core';
-import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
+import { BehaviorSubject, distinctUntilChanged, interval, map } from 'rxjs';
 import { MapStoreActions, MapStoreState } from '../map-store';
 import { Store } from '@ngrx/store';
 import { NoiseService } from 'src/app/shared/services/noise.service';
-import { HttpClient } from '@angular/common/http';
-import { SpritesService } from 'src/app/shared/services/sprites.service';
+import { SpritesService } from 'src/app/features/sprites/sprites.service';
+import { ObjectsService } from '../objects';
+import { MouseService } from 'src/app/shared/services/mouse.service';
+import { MapService } from '../map-store/map.service';
 
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
   styleUrls: ['./map.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapComponent implements AfterViewInit, OnInit {
 
@@ -32,23 +33,57 @@ export class MapComponent implements AfterViewInit, OnInit {
   public showNet = false;
   public showShadow = false;
 
-  private offsetX = 0;
-  private offsetY = 0;
+  public offsetX = 0;
+  public offsetY = 0;
+
+  private animationFps: number = 0;
+
+  private mouseCords: { x: number, y: number } | null = null;
+  private mouseDownCords: { x: number, y: number } | null = null;
+  public currentCords: { x: number, y: number } | null = null;
+
+  public firstTileX = 0;
+  public firstTileY = 0;
+  private readonly tilesInRow = 26 + 1 + 1;
+  private readonly tilesInColumn = 20 + 1 + 1;
+  public animationFrame = 0;
 
   constructor (
     private zone: NgZone,
     private store: Store<MapStoreState>,
     private noiseService: NoiseService,
-    private httpClient: HttpClient,
     private spritesService: SpritesService,
+    private objectService: ObjectsService,
+    private mouseService: MouseService,
+    private mapService: MapService,
   ) {
 
   }
 
   ngOnInit(): void {
     this.store.dispatch(MapStoreActions.generateInitMapParts());
-    console.log(this.noiseService.get(50, 200, 1));
+    this.mouseService.mouseCords$.subscribe(mouseCords => {
+      this.mouseCords = mouseCords;
+    });
 
+    this.mouseService.mouseDownCords$.subscribe(mouseDownCords => {
+      this.mouseDownCords = mouseDownCords;
+    });
+
+    this.mapService.currentCords$.subscribe(currentCords => {
+      this.currentCords = currentCords;
+      this.firstTileX = Math.trunc(this.currentCords.x / 32) - Math.floor(this.tilesInRow / 2);
+      this.firstTileY = Math.trunc(this.currentCords.y / 32) - Math.floor(this.tilesInColumn / 2);
+      this.offsetX = this.currentCords.x % 32;
+      this.offsetY = this.currentCords.y % 32;
+    });
+
+    interval(200).subscribe(_ => {
+      this.animationFrame += 1;
+      if(this.animationFrame >= 5 * 4) {
+        this.animationFrame = 0;
+      }
+    });
   }
 
   ngAfterViewInit() {
@@ -87,13 +122,15 @@ export class MapComponent implements AfterViewInit, OnInit {
             that.updateMap(context);
             that.drawNet(context);
             that.updateShaders();
+            that.drawFpsAnimation(context);
+            that.drawCursor(context);
   
             fps = 1000/(time-oldtime);
             that.fpsSubject$.next(fps);
             oldtime = time;
   
             if (game_running) requestAnimationFrame(gameLoop);
-  
+            
         }
         
         gameLoop(0);
@@ -104,16 +141,75 @@ export class MapComponent implements AfterViewInit, OnInit {
     
   }
 
+  public mouseMove(event: MouseEvent): void {
+    this.mouseService.mouseMoved((event as any).layerX, (event as any).layerY, (event as any).movementX, (event as any).movementY);
+  }
+
+  public mouseLeave(): void {
+    this.mouseService.mouseLeave();
+  }
+
+  public mouseDown(event: MouseEvent): void {
+    this.mouseService.mouseDown((event as any).layerX, (event as any).layerY);
+  }
+
+  public mouseUp(): void {
+    this.mouseService.mouseUp();
+  }
+
+  public resetCords(): void {
+    this.mapService.setCords(0, 0);
+  }
+
+  public drawCursor(context: CanvasRenderingContext2D) {
+    if (this.mouseCords != null) {
+      context.beginPath();
+      context.arc(this.mouseCords.x, this.mouseCords.y, 5, 0, 360);
+      context.fillStyle = this.mouseDownCords != null ? 'orange' : 'white';
+      context.fill();
+      context.closePath();
+    }
+
+    if (this.mouseDownCords != null) {
+      context.beginPath();
+      context.arc(this.mouseDownCords.x, this.mouseDownCords.y, 5, 0, 360);
+      context.fillStyle = 'blue';
+      context.fill();
+      context.closePath();
+    }
+  }
+
   private updateMap(ctx: CanvasRenderingContext2D): void {
-    for (let x = -1; x < 27; x++) {
-      for (let y = -1; y < 21; y++) {
-        const noise = this.noiseService.get(x, y, 1);
-        const bg = this.spritesService.get(Math.floor(noise * 16) + 61);
+    for (let y = 0; y < this.tilesInColumn; y++) {
+      for (let x = 0; x < this.tilesInRow; x++) {
+        const realX = this.firstTileX + x;
+        const realY = this.firstTileY + y;
+
+        const noise = this.noiseService.get(realX, realY, 1);
+        const objectId = this.getObjectAt(realX, realY); 
+        const object = this.objectService.getObject(objectId);
+        const spriteDefinitionId = object.spriteDefinitions[Math.floor(noise * object.spriteDefinitions.length)];
+        const definition = this.spritesService.getDefinition(spriteDefinitionId);
+        const sprite = definition.animate ? definition.images.reduce((p, c) => {
+          if (p.spriteId != null) {
+            return p;
+          }
+
+          const spriteFrame = p.anim + c.animationFrameDuration!;
+          if (spriteFrame > this.animationFrame) {
+            return { spriteId: c.spriteId, anim: spriteFrame };
+          }
+          else {
+            return { spriteId: null, anim: spriteFrame };
+          }
+        }, { anim: 0, spriteId: null } as { anim: number, spriteId: number | null }) : definition.images[0];
+        const bg = this.spritesService.get(sprite.spriteId!);
+
         if (bg == null) {
           continue;
         }
 
-        ctx.drawImage(bg, x * 32 + this.offsetX, y * 32 + this.offsetY, 32, 32);
+        ctx.drawImage(bg, (x - 1) * 32 - this.offsetX, (y - 1) * 32 - this.offsetY, 32, 32);
       }
     }
   }
@@ -130,6 +226,26 @@ export class MapComponent implements AfterViewInit, OnInit {
         ctx.strokeRect(x * 32 + this.offsetX, y * 32 + this.offsetY, 32, 32);
       }
     }
+  }
+
+  private getObjectAt(x: number, y: number): number {
+    if (x == 0 && y == 0) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  private drawFpsAnimation(ctx: CanvasRenderingContext2D): void {
+    ctx.beginPath();
+    ctx.arc(30, 13, this.animationFps / 10, 0, 360);
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
+    this.animationFps += 1;
+    if (this.animationFps > 50) {
+      this.animationFps = 0;
+    }
+    ctx.closePath();
   }
 
   private updateShaders(): void {

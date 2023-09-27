@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { SpritesService } from './shared/services/sprites.service';
+import { SpritesService } from './features/sprites/sprites.service';
 
 @Component({
   selector: 'app-root',

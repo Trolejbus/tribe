@@ -1,12 +1,19 @@
 <div class="flex w-screen h-screen justify-center items-center">
     <div class="flex">
-        <div class="bg-green-800 relative" style="width: 832px; height: 640px">
+        <div
+            class="bg-black relative cursor-none"
+            style="width: 832px; height: 640px"
+            (mousemove)="mouseMove($event)"
+            (mouseleave)="mouseLeave()"
+            (mousedown)="mouseDown($event)"
+            (mouseup)="mouseUp()"
+        >
             <canvas #canvas width="832px" height="640px" class="absolute top-0 left-0"></canvas>
             <canvas #canvasLights *ngIf="showShadow" width="832px" height="640px" class="absolute top-0 left-0"></canvas>
             <canvas #canvasLightsTemp width="832px" height="640px" class="absolute hidden"></canvas>
-            <div class="absolute top-0 left-0 text-white">{{ fps$ | async }}</div>
+            <div class="absolute top-0 left-1 text-white">{{ fps$ | async }}</div>
         </div>
-        <div>
+        <div class=" h-full">
             <div class="w-64 p-4">
                 <div>
                     <input id="showNet" type="checkbox" class="mr-1" [(ngModel)]="showNet"/>
@@ -16,6 +23,12 @@
                 <div>
                     <input id="showShadow" type="checkbox" class="mr-1" [(ngModel)]="showShadow"/>
                     <label for="showShadow">Show Shadow</label>
+                </div>
+                <div class="mt-auto">
+                    <div>CurrentCords: {{ currentCords?.x }} | {{ currentCords?.y }} <button (click)="resetCords()">Reset Cords</button></div>
+                    <div>FirstTile: {{ firstTileX }} | {{ firstTileY }}</div>
+                    <div>Offset: {{ offsetX }} | {{ offsetY }}</div>
+                    <div>AnimationFrame: {{ animationFrame }}</div>
                 </div>
             </div>
         </div>

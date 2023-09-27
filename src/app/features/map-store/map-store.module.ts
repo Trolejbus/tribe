@@ -5,6 +5,7 @@ import { EffectsModule } from '@ngrx/effects';
 import { mapStoreFeature } from './map-store.reducer';
 import { MapStoreEffects } from './map-store.effects';
 import { MapGeneratorService } from './map-generator.service';
+import { MapService } from './map.service';
 
 @NgModule({
   declarations: [],
@@ -15,6 +16,7 @@ import { MapGeneratorService } from './map-generator.service';
   ],
   providers: [
     MapGeneratorService,
+    MapService,
   ],
 })
 export class MapStoreModule { }

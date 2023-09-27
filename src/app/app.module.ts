@@ -12,7 +12,10 @@ import { MapComponent } from './features/map/map.component';
 import { MapModule } from './features/map/map.module';
 import { MapStoreModule } from './features/map-store';
 import { NoiseService } from './shared/services/noise.service';
-import { SpritesService } from './shared/services/sprites.service';
+import { SpritesService } from './features/sprites/sprites.service';
+import { SpritesModule } from './features/sprites';
+import { ObjectsModule } from './features/objects';
+import { MouseService } from './shared/services/mouse.service';
 
 const routes: Routes = [
   {
@@ -43,10 +46,13 @@ const routes: Routes = [
     EffectsModule.forRoot([]),
     MapModule,
     MapStoreModule,
+    SpritesModule,
+    ObjectsModule,
   ],
   providers: [
     NoiseService,
     SpritesService,
+    MouseService,
   ],
   bootstrap: [AppComponent]
 })

@@ -7,7 +7,7 @@ export class MapGeneratorService {
 
     public generateMapPart(x: number, y: number): MapPart {
         const items = new Array<MapPartItem[][]>(this.PartWidth);
-        const itemId = Math.floor(Math.random() * 5);
+        const itemId = Math.floor(Math.random() * 2);
         for (let rowIndex = 0; rowIndex < this.PartWidth; rowIndex++) {
             items[rowIndex] = new Array<MapPartItem[]>(this.PartHeight);
             for (let colIndex = 0; colIndex < this.PartHeight; colIndex++) {
