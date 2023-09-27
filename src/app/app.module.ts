@@ -10,6 +10,9 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { EffectsModule } from '@ngrx/effects';
 import { MapComponent } from './features/map/map.component';
 import { MapModule } from './features/map/map.module';
+import { MapStoreModule } from './features/map-store';
+import { NoiseService } from './shared/services/noise.service';
+import { SpritesService } from './shared/services/sprites.service';
 
 const routes: Routes = [
   {
@@ -39,8 +42,12 @@ const routes: Routes = [
     StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: !isDevMode() }),
     EffectsModule.forRoot([]),
     MapModule,
+    MapStoreModule,
   ],
-  providers: [],
+  providers: [
+    NoiseService,
+    SpritesService,
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

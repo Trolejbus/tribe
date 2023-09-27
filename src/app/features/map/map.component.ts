@@ -1,5 +1,10 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone, OnInit, ViewChild } from '@angular/core';
 import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
+import { MapStoreActions, MapStoreState } from '../map-store';
+import { Store } from '@ngrx/store';
+import { NoiseService } from 'src/app/shared/services/noise.service';
+import { HttpClient } from '@angular/common/http';
+import { SpritesService } from 'src/app/shared/services/sprites.service';
 
 @Component({
   selector: 'app-map',
@@ -7,7 +12,7 @@ import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
   styleUrls: ['./map.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MapComponent implements AfterViewInit {
+export class MapComponent implements AfterViewInit, OnInit {
 
   @ViewChild('canvas')
   public canvas!: ElementRef<HTMLCanvasElement>;
@@ -24,15 +29,31 @@ export class MapComponent implements AfterViewInit {
     distinctUntilChanged(),
   );
 
-  constructor (private zone: NgZone) {
+  public showNet = false;
+  public showShadow = false;
+
+  private offsetX = 0;
+  private offsetY = 0;
+
+  constructor (
+    private zone: NgZone,
+    private store: Store<MapStoreState>,
+    private noiseService: NoiseService,
+    private httpClient: HttpClient,
+    private spritesService: SpritesService,
+  ) {
+
+  }
+
+  ngOnInit(): void {
+    this.store.dispatch(MapStoreActions.generateInitMapParts());
+    console.log(this.noiseService.get(50, 200, 1));
 
   }
 
   ngAfterViewInit() {
+
     this.zone.runOutsideAngular(() => {
-      var bg = new Image();
-      bg.src = 'http://www.pixeljoint.com/files/icons/full/testmap.gif';
-  
       window.requestAnimationFrame = (function(){
         return  window.requestAnimationFrame || 
           (window as any).webkitRequestAnimationFrame   || 
@@ -41,7 +62,6 @@ export class MapComponent implements AfterViewInit {
           (window as any).msRequestAnimationFrame       || 
           ((callback: any, element: any) => {
               window.setTimeout(() => {
-                console.log('test');
                 callback(+new Date);
               }, 1000 / 60);
           })
@@ -56,15 +76,16 @@ export class MapComponent implements AfterViewInit {
             height       = canvas.height,
             fps          = 0,
             game_running = true,
-            show_fps     = true,
             oldtime = +new Date
   
         function gameLoop(time: any){
   
             //Clear screen
+            context.beginPath();
             context.clearRect(0, 0, width, height);
   
-            that.updateMap(bg);
+            that.updateMap(context);
+            that.drawNet(context);
             that.updateShaders();
   
             fps = 1000/(time-oldtime);
@@ -83,14 +104,39 @@ export class MapComponent implements AfterViewInit {
     
   }
 
-  private updateMap(bg: any): void {
-    var x = this.canvas.nativeElement.getContext('2d')!;
-    x!.globalCompositeOperation = 'source-over';
-    x!.drawImage(bg, 0, 0, 256, 256);
+  private updateMap(ctx: CanvasRenderingContext2D): void {
+    for (let x = -1; x < 27; x++) {
+      for (let y = -1; y < 21; y++) {
+        const noise = this.noiseService.get(x, y, 1);
+        const bg = this.spritesService.get(Math.floor(noise * 16) + 61);
+        if (bg == null) {
+          continue;
+        }
+
+        ctx.drawImage(bg, x * 32 + this.offsetX, y * 32 + this.offsetY, 32, 32);
+      }
+    }
+  }
+
+  private drawNet(ctx: CanvasRenderingContext2D): void {
+    if (!this.showNet) {
+      return;
+    }
+
+    ctx.beginPath();
+    ctx.strokeStyle = "black";
+    for (let x = -1; x < 27; x++) {
+      for (let y = -1; y < 21; y++) {
+        ctx.strokeRect(x * 32 + this.offsetX, y * 32 + this.offsetY, 32, 32);
+      }
+    }
   }
 
   private updateShaders(): void {
-
+    if (!this.showShadow) {
+      return;
+    }
+  
     const canvas3 = this.canvasLightsTemp.nativeElement.getContext('2d')!;
     const width = this.canvasLightsTemp.nativeElement.width;
     const height = this.canvasLightsTemp.nativeElement.height;
@@ -128,53 +174,4 @@ export class MapComponent implements AfterViewInit {
 
     ctxTo!.putImageData(imgData, 0, 0);
   }
-/*
-(
-
-  /*ngAfterViewInit(): void {
-    var c = document.getElementById('c');
-    var x = this.canvas.nativeElement.getContext('2d')!;
-    const canvas2 = this.canvasLights.nativeElement.getContext('2d')!;
-    var fg = new Image();
-    var bg = new Image();
-
-    if (x == null) {
-      throw new Error('Cannot be null');
-    }
-
-    const that = this;
-  
-    fg.addEventListener('load', function() { bg.addEventListener('load', () => {
-      that.draw(x, canvas2, bg);
-    }, false); }, false);
-    fg.src = 'http://i.imgur.com/fWThnZy.png';
-    bg.src = 'http://www.pixeljoint.com/files/icons/full/testmap.gif';
-        
-  }
-
-  private draw(x: CanvasRenderingContext2D, canvas2: CanvasRenderingContext2D, bg: any)
-  {
-
-  }
-
-  private reverseAlphas(canvas: HTMLCanvasElement) {
-    const width = canvas.width;
-    const height = canvas.height;
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx!.getImageData(0, 0, width, height);
-    const data = imgData.data;
-    for (let x = 0; x < width; x++) {
-      for (let y = 0; y < height; y++) {
-        const index = 4 * (x + y * width);
-        const alpha = data[index + 3];
-        data[index + 3] = 255 - alpha;
-      }
-    }
-
-    ctx!.putImageData(imgData, 0, 0);
-  }*/
 }
-function callback(arg0: number) {
-  throw new Error('Function not implemented.');
-}
-
