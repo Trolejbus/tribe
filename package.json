@@ -25,6 +25,7 @@
     "@ngrx/store-devtools": "^16.2.0",
     "ngx-indexed-db": "^16.0.0",
     "perlin-noise-3d": "^0.5.4",
+    "primeng": "^16.4.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.13.0"

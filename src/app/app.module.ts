@@ -25,7 +25,11 @@ const routes: Routes = [
   {
     path: 'map',
     component: MapComponent,
-  }
+  },
+  {
+    path: 'sprites',
+    loadChildren: async () => (await import('./features/sprites-list')).SpritesListModule,
+  },
 ];
 
 @NgModule({

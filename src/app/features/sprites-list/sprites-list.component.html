@@ -1,0 +1,11 @@
+<p-button label="Reload" (click)="reload()"></p-button>
+<div *ngIf="vm$ | async as vm">
+    <p-virtualScroller [value]="vm.items" [style]="{'width': '200px'}" scrollHeight="200px" [itemSize]="40">
+        <ng-template pTemplate="item" let-item>
+            <div class="flex gap-1 h-full items-center px-1">
+                <app-sprite-item [image]="item.image"></app-sprite-item>
+                {{ item.index }}
+            </div>
+        </ng-template>
+    </p-virtualScroller>
+</div>

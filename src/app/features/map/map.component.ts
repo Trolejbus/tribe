@@ -169,14 +169,6 @@ export class MapComponent implements AfterViewInit, OnInit {
       context.fill();
       context.closePath();
     }
-
-    if (this.mouseDownCords != null) {
-      context.beginPath();
-      context.arc(this.mouseDownCords.x, this.mouseDownCords.y, 5, 0, 360);
-      context.fillStyle = 'blue';
-      context.fill();
-      context.closePath();
-    }
   }
 
   private updateMap(ctx: CanvasRenderingContext2D): void {
@@ -223,7 +215,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     ctx.strokeStyle = "black";
     for (let x = -1; x < 27; x++) {
       for (let y = -1; y < 21; y++) {
-        ctx.strokeRect(x * 32 + this.offsetX, y * 32 + this.offsetY, 32, 32);
+        ctx.strokeRect(x * 32 - this.offsetX, y * 32 - this.offsetY, 32, 32);
       }
     }
   }

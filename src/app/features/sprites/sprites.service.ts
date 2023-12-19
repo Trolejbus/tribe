@@ -14,6 +14,11 @@ export class SpritesService {
     public isLoading$ = this.isLoadingSubject$.asObservable();
 
     private spritesDefinition: SpriteModel[] = [
+        ...([61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76].map((spriteId, index) => ({
+            id: index + 1,
+            animate: false,
+            images: [ { spriteId } ], 
+        }))),
         {
             id: 0,
             animate: true,
@@ -47,11 +52,6 @@ export class SpritesService {
                 { animationFrameDuration: 1, spriteId: 755 },*/
             ],
         },
-        ...([61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76].map((spriteId, index) => ({
-            id: index + 1,
-            animate: false,
-            images: [ { spriteId } ], 
-        }))),
     ]
 
     constructor(
@@ -84,5 +84,9 @@ export class SpritesService {
 
     public getDefinition(id: number): SpriteModel {
         return this.spritesDefinition.find(s => s.id === id)!;
+    }
+
+    public getAll(): ImageBitmap[] {
+        return this.sprites;
     }
 }
